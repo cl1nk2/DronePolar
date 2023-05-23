@@ -184,34 +184,46 @@ def imwrite_result_split(img_in, name):
   cv2.imwrite(name + "_water_b.png", img_water_b)
   
   
+
+current_directory = os.getcwd()
   
 # Read images
 img_name = sys.argv[1]
-img_name_split = img_name.split("_")
-if len(img_name_split) > 2:
-  img_time = pd.to_datetime(img_name_split[2], utc=True)
 
+if img_name[0] != '/':
+    img_name = current_directory + '/' + img_name
+
+img_name_split = img_name.split("_")
+
+# Get the directory where the Python script is located
+script_directory = os.path.dirname(os.path.realpath(__file__))
+
+# Set the working directory to the script directory
+os.chdir(script_directory)
+
+print("DEBUG : image name is set to: " + img_name)
 img_raw = cv2.imread(img_name, 0)
 
 if exists("flightinfo.csv"):
-    DJI_data = pd.read_csv("flightinfo.csv", index_col=0)
-    DJI_data["Image:Time"] = pd.to_datetime(DJI_data["Image:Time"], utc=True)
+    if len(img_name_split) > 2:
+        img_time = pd.to_datetime(img_name_split[-2], utc=True)
+        DJI_data = pd.read_csv("flightinfo.csv", index_col=0)
+        DJI_data["Image:Time"] = pd.to_datetime(DJI_data["Image:Time"], utc=True)
 
-    for i in range(len(DJI_data["Image:Time"])):
-      if 'img_time' in locals():
-        if img_time == DJI_data["Image:Time"][i]:
-          img_params = DJI_data.iloc[i]
-          print(img_name)
-          print(img_params)
-          print()
+        for i in range(len(DJI_data["Image:Time"])):
+          if 'img_time' in locals():
+            if img_time == DJI_data["Image:Time"][i]:
+              img_params = DJI_data.iloc[i]
+              print(img_name)
+              print(img_params)
+              print()
+              
+    else:
+        print("ERROR : time is not set in filename")
     
 
-img_polarsplit = pa.demosaicing(img_raw, "COLOR_PolarRGB")
-
-#cv2.imwrite("0.bmp", img_polarsplit[..., 0])
-#cv2.imwrite("45.bmp", img_polarsplit[..., 1])
-#cv2.imwrite("90.bmp", img_polarsplit[..., 2])
-#cv2.imwrite("135.bmp", img_polarsplit[..., 3])
+img_000, img_045, img_090, img_135 = pa.demosaicing(img_raw, pa.COLOR_PolarRGB)
+img_polarsplit = [img_000, img_045, img_090, img_135]
 
 #Calculate Stokes vectors
 angles = np.deg2rad([90, 135, 0, 45])
